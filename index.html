@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samsung Sales Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <span class="logo-main">SAMSUNG</span>
+    <span class="logo-sub">Sales Analytics</span>
+  </div>
+  <div class="hdr-right">
+    <span id="period-badge"></span>
+    <button class="btn-pri" onclick="document.getElementById('file-input').click()">파일 변경</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+  </div>
+</header>
+
+<!-- UPLOAD -->
+<div id="upload-section">
+  <div class="upload-card" id="drop-zone">
+    <div class="upload-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="18" x2="12" y2="12"/>
+        <polyline points="9 15 12 12 15 15"/>
+      </svg>
+    </div>
+    <h2>엑셀 파일을 업로드하세요</h2>
+    <p>samsung_data.xlsx 형식의 판매 데이터를<br>드래그&드롭하거나 아래 버튼으로 선택하세요</p>
+    <button class="btn-pri" onclick="event.stopPropagation();document.getElementById('file-input').click()">파일 선택</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading"><div class="spin lg"></div></div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+  <!-- Filter Bar -->
+  <div id="fbar">
+    <span class="fsep" id="fsep1"></span>
+    <div class="date-row">
+      <span class="dlbl">기간</span>
+      <input type="date" id="date-start" class="dinp" onchange="debouncedUpdate()">
+      <span class="dlbl">~</span>
+      <input type="date" id="date-end" class="dinp" onchange="debouncedUpdate()">
+    </div>
+    <span class="fsep"></span>
+    <button class="btn-rst" onclick="resetFilters()">초기화</button>
+    <span id="fsum"></span>
+  </div>
+
+  <!-- Tab Nav -->
+  <div id="tab-nav">
+    <button class="tab-btn active" data-tab="overview"  onclick="switchTab('overview')"><span class="tab-icon">📊</span> Overview</button>
+    <button class="tab-btn"        data-tab="channel"   onclick="switchTab('channel')"><span class="tab-icon">🏪</span> 채널분석</button>
+    <button class="tab-btn"        data-tab="customer"  onclick="switchTab('customer')"><span class="tab-icon">👥</span> 고객분석</button>
+    <button class="tab-btn"        data-tab="product"   onclick="switchTab('product')"><span class="tab-icon">📦</span> 상품분석</button>
+    <button class="tab-btn"        data-tab="detail"    onclick="switchTab('detail')"><span class="tab-icon">🗂️</span> 데이터상세</button>
+    <button class="tab-btn"        data-tab="report"    onclick="switchTab('report')"><span class="tab-icon">📄</span> 보고서 <span class="tab-soon">STEP 4</span></button>
+  </div>
+
+  <!-- Tab Body -->
+  <div id="tab-body">
+
+    <!-- ① OVERVIEW -->
+    <div class="tab-pane active" id="pane-overview">
+      <div class="ai-box" id="ai-overview">
+        <div class="ai-hdr">
+          <div class="ai-ico">✦</div>
+          <span class="ai-ttl">AI 종합 인사이트</span>
+          <span class="ai-cond" id="cond-overview"></span>
+          <button class="btn-ai-refresh" id="btn-overview" onclick="runAI('overview')">↻ 재분석</button>
+        </div>
+        <div class="ai-txt ai-loading" id="txt-overview"><div class="spin sm"></div> 분석 중...</div>
+      </div>
+      <p class="sec-lbl">핵심 지표</p>
+      <div class="g5" id="kpi-grid"></div>
+      <p class="sec-lbl">일별 매출 추이</p>
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-ttl">일별 실매출액</span>
+          <span class="card-meta" id="daily-meta"></span>
+        </div>
+        <div class="cwrap"><canvas id="dailyChart" height="200"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ② CHANNEL -->
+    <div class="tab-pane" id="pane-channel">
+      <div class="ai-box" id="ai-channel">
+        <div class="ai-hdr">
+          <div class="ai-ico">✦</div>
+          <span class="ai-ttl">AI 채널 분석</span>
+          <span class="ai-cond" id="cond-channel"></span>
+          <button class="btn-ai-refresh" id="btn-channel" onclick="runAI('channel')">↻ 재분석</button>
+        </div>
+        <div class="ai-txt ai-loading" id="txt-channel"><div class="spin sm"></div> 분석 중...</div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-hdr"><span class="card-ttl">채널별 매출 비중</span></div>
+          <div class="cwrap"><canvas id="chDonutChart" height="260"></canvas></div>
+          <div class="leg" id="ch-leg"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <span class="card-ttl">매장별 매출 Top 20</span>
+            <span class="card-meta">실매출액 기준</span>
+          </div>
+          <div class="cwrap" style="height:300px"><canvas id="storeChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ CUSTOMER -->
+    <div class="tab-pane" id="pane-customer">
+      <div class="ai-box" id="ai-customer">
+        <div class="ai-hdr">
+          <div class="ai-ico">✦</div>
+          <span class="ai-ttl">AI 고객 세그먼트 분석</span>
+          <span class="ai-cond" id="cond-customer"></span>
+          <button class="btn-ai-refresh" id="btn-customer" onclick="runAI('customer')">↻ 재분석</button>
+        </div>
+        <div class="ai-txt ai-loading" id="txt-customer"><div class="spin sm"></div> 분석 중...</div>
+      </div>
+      <div class="g3">
+        <div class="card">
+          <div class="card-hdr"><span class="card-ttl">성별 매출</span></div>
+          <div class="cwrap"><canvas id="genderChart" height="220"></canvas></div>
+          <div class="leg" id="gender-leg"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-ttl">연령대별 매출</span></div>
+          <div class="cwrap" style="height:220px"><canvas id="ageChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-ttl">거주지역별 매출</span></div>
+          <div class="cwrap" style="height:220px"><canvas id="regionChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ PRODUCT -->
+    <div class="tab-pane" id="pane-product">
+      <div class="ai-box" id="ai-product">
+        <div class="ai-hdr">
+          <div class="ai-ico">✦</div>
+          <span class="ai-ttl">AI 상품 성과 분석</span>
+          <span class="ai-cond" id="cond-product"></span>
+          <button class="btn-ai-refresh" id="btn-product" onclick="runAI('product')">↻ 재분석</button>
+        </div>
+        <div class="ai-txt ai-loading" id="txt-product"><div class="spin sm"></div> 분석 중...</div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-hdr"><span class="card-ttl">카테고리별 매출</span></div>
+          <div class="cwrap"><canvas id="catChart" height="260"></canvas></div>
+          <div class="leg" id="cat-leg"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-ttl">프리미엄 등급별 매출</span></div>
+          <div class="cwrap" style="height:300px"><canvas id="premChart"></canvas></div>
+        </div>
+      </div>
+      <div class="g1" style="margin-top:0">
+        <div class="card">
+          <div class="card-hdr">
+            <span class="card-ttl">매출 TOP 10 상품</span>
+            <span class="card-meta">실매출액 기준</span>
+          </div>
+          <table class="ttbl" id="top-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ DETAIL -->
+    <div class="tab-pane" id="pane-detail">
+      <div class="tbl-toolbar">
+        <input type="text" class="tbl-search" id="tbl-search" placeholder="검색어 입력..." oninput="renderTable()">
+        <select class="tbl-pgsz" id="tbl-pgsz" onchange="renderTable()">
+          <option value="50">50행</option>
+          <option value="100">100행</option>
+        </select>
+        <span class="tbl-info" id="tbl-info"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dtbl" id="dtbl">
+          <thead id="dtbl-head"></thead>
+          <tbody id="dtbl-body"></tbody>
+        </table>
+      </div>
+      <div class="tbl-pg" id="tbl-pg"></div>
+    </div>
+
+    <!-- ⑥ REPORT -->
+    <div class="tab-pane" id="pane-report">
+      <div class="coming-soon">
+        <div class="cs-icon">📄</div>
+        <p>STEP 4에서 추가될 예정입니다</p>
+      </div>
+    </div>
+
+  </div><!-- /tab-body -->
+</div><!-- /dashboard -->
+
+<!-- External Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- App Logic -->
+<script src="dashboard.js"></script>
+
+</body>
+</html>
